@@ -10,14 +10,15 @@
 FILE *stream;
 int *registri;                   /*inizializzo tutti i registri a 0 */
 int *stack;	                  /*inizializzo lo stack di 64 KB (di interi) a 0*/
-int* memoria;
+int *memoria;
 
 
 
-int inizializza(int istruzioni){
+void inizializza(int istruzioni){
 	registri = (int*) calloc(32, sizeof(int));
 	stack    = (int*) calloc(16384, sizeof(int));
-	memoria    = (int*) calloc(istruzioni, sizeof(int));
+	memoria  = (int*) calloc(istruzioni, sizeof(int));
+	printf("Inizializzazione avvenuta con successo!\n");
 }
 
 
@@ -33,8 +34,8 @@ int main(int argc, char **argv){
 	int numero_istruzione = 0;
 	int parametro1 = 0;
 	int parametro2 = 0;
-	ssize_t len;
-	char* buffer;
+	size_t len;
+	char *buffer = NULL;
 	int primo_ciclo_fetch = 0;
 
 
@@ -66,19 +67,17 @@ int main(int argc, char **argv){
 	}
 	
 	if(strcmp(argv[1],"esegui") == 0){
-		getline( &buffer, & len, stream);
-		sscanf(buffer, "%d", & numero_istruzioni_programma);
-
+		getline( &buffer, &len, stream);
+		sscanf(buffer, "%d", &numero_istruzioni_programma);
+		
 		inizializza(numero_istruzioni_programma);
 
-		buffer=NULL;		
-	
-		for(appo=0 ; appo < numero_istruzioni_programma-1; ++appo){           //prefetch istruzioni
-			getline( &buffer, &len, stream);
-			/*sscanf(buffer, "%d", &memoria[appo]);
-			printf("vettore[%d]= %d\n", appo,memoria[appo]);*/
+		for(appo=0 ; appo < numero_istruzioni_programma; ++appo){           //prefetch istruzioni
+			getline(&buffer, &len, stream);
+			sscanf(buffer, "%d", &memoria[appo]);
+			//printf("vettore[%d]= %d\n", appo,memoria[appo]);
 		}
-                /*
+                 
 		while(guardia){
 			switch(memoria[IP++]){
 				
@@ -105,11 +104,11 @@ int main(int argc, char **argv){
                                         break;
 
                                 case 12: 							//mov
-                                        registri[memoria[IP++]] = memoria[IP++]; 
+                                        registri[memoria[IP]] = memoria[IP+1]; IP++; 
                                         break;
 
                                 case 20: 							//call
-                                        stack[SP++] = memoria[IP+1];
+                                        stack[SP++] = IP+1;
 					IP = memoria[IP];
                                         break;
 
@@ -136,33 +135,46 @@ int main(int argc, char **argv){
 						IP = memoria[IP++];
                                         break;
 
-                                case 30: 						        		//add
-                                        stack[SP++] = registri[memoria[IP++]] + registri[memoria[IP++]]; 
+                                case 30: 						        			//add
+                                        stack[SP++] = registri[memoria[IP]] + registri[memoria[IP+1]]; IP=IP+2; 
                                         break;
 
-                                case 31: 									//sub
-                                        stack[SP++] = registri[memoria[IP++]] - registri[memoria[IP++]]; 
+                                case 31: 										//sub
+                                        stack[SP++] = registri[memoria[IP]] - registri[memoria[IP+1]]; IP=IP+2; 
                                         break;
 
-                                case 32: 									//mult
-                                        stack[SP++] = registri[memoria[IP++]] * registri[memoria[IP++]];
+                                case 32: 										//mult
+                                        stack[SP++] = registri[memoria[IP]] * registri[memoria[IP+1]]; IP=IP+2; 
                                         break;
 
-                                case 33: 		                                                        //div
+                                case 33: 		                                                        	//div
                                         if(registri[memoria[IP+1]] == 0){ 
 						printf("Divisione per 0!\n");	
 						guardia=0;
 					}						
-                                        stack[SP++] = registri[memoria[IP++]] / registri[memoria[IP++]];
+                                        stack[SP++] = registri[memoria[IP]] / registri[memoria[IP+1]]; IP=IP+2; 
                                         break;
 
                                 default: //error
                                         printf("error");
                                         break;
 			}	//parentesi switch
+
+			for(appo=0; appo< 32; appo++){
+				printf("REG[%d]: %d\n", appo, registri[appo]);
+			}
+
+			printf("\n");			
+	
+			for(appo=0; appo< 32; appo++){
+				printf("STACK[%d]: %d\n", appo, registri[appo]);
+			}
+
+			scanf("%d", &appo);
+		
 		}  //parentesi while
 
-		printf("Esecuzione Terminata!\n");*/
+		printf("Esecuzione Terminata!\n"); 
 	} //parentesi funzione 
 
 
