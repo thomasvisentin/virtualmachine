@@ -75,7 +75,7 @@ int main(int argc, char **argv){
 		for(appo=0 ; appo < numero_istruzioni_programma; ++appo){           //prefetch istruzioni
 			getline(&buffer, &len, stream);
 			sscanf(buffer, "%d", &memoria[appo]);
-			//printf("vettore[%d]= %d\n", appo,memoria[appo]);
+			printf("vettore[%d]= %d\n", appo,memoria[appo]);
 		}
                  
 		while(guardia){
@@ -104,7 +104,7 @@ int main(int argc, char **argv){
                                         break;
 
                                 case 12: 							//mov
-                                        registri[memoria[IP]] = memoria[IP+1]; IP++; 
+                                        registri[memoria[IP]] = memoria[IP+1]; IP=IP+2; 
                                         break;
 
                                 case 20: 							//call
@@ -160,17 +160,17 @@ int main(int argc, char **argv){
                                         break;
 			}	//parentesi switch
 
-			for(appo=0; appo< 32; appo++){
+			/*for(appo=0; appo< 32; appo++){
 				printf("REG[%d]: %d\n", appo, registri[appo]);
 			}
 
 			printf("\n");			
 	
 			for(appo=0; appo< 32; appo++){
-				printf("STACK[%d]: %d\n", appo, registri[appo]);
+				printf("STACK[%d]: %d\n", appo, stack[appo]);
 			}
 
-			scanf("%d", &appo);
+			scanf("%d", &appo);*/
 		
 		}  //parentesi while
 
