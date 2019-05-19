@@ -2,27 +2,40 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
+/**********************************************************************************/
+/*INIZIALIZZAZIONE DICHIARAZIONE VARIABILI GLOBALI*/
+/**********************************************************************************/
+FILE *stream;
+int *registri;                   /*inizializzo tutti i registri a 0 */
+int *stack;	                  /*inizializzo lo stack di 64 KB (di interi) a 0*/
+int* memoria;
+
+
+
+int inizializza(int istruzioni){
+	registri = (int*) calloc(32, sizeof(int));
+	stack    = (int*) calloc(16384, sizeof(int));
+	memoria    = (int*) calloc(istruzioni, sizeof(int));
+}
+
+
+
 int main(int argc, char **argv){
 
 	/**********************************************************************************/
 	/*INIZIALIZZAZIONE DICHIARAZIONE VARIABILI*/
 	/**********************************************************************************/
 
-	FILE *stream;
-	int registri[32] = {0};                   /*inizializzo tutti i registri a 0 */
-    	int stack[16184] = {0};	                  /*inizializzo lo stack di 64 KB (di interi) a 0*/
-	int* memoria;
-	ssize_t nread;                            /*usato per raccogliere la lunghezza della linea letta da getline() */
-	int primo_ciclo_fetch = 0;
-	int numero_istruzioni_programma;
+	int numero_istruzioni_programma, appo;
+	int  SP = 0; int IP = 0; int guardia = 1;
 	int numero_istruzione = 0;
 	int parametro1 = 0;
 	int parametro2 = 0;
 	ssize_t len;
 	char* buffer;
-	char* parametro_1 = ("%s",argv[1]);       /* salvo il primo parametro */
-	char* parametro_2 = ("%s",argv[2]);       /* salvo il secondo parametro*/
-	
+	int primo_ciclo_fetch = 0;
 
 
 	/**********************************************************************************/
@@ -39,34 +52,123 @@ int main(int argc, char **argv){
 		printf("Too few parameters\n");
 		return 1;
 	}
-
-	if((strcmp(parametro_1,"esegui") != 0) && (strcmp(parametro_1,"stampa") != 0)){
+	/* parametro */
+	if((strcmp(argv[1],"esegui") != 0) && (strcmp(argv[1],"stampa") != 0)){
 		printf("First parameter is invalid\n");
 		return 1;
 	}
 	
-	stream = fopen(parametro_2, "r");        
+	stream = fopen(argv[2], "r");        
 	/* se il file non esiste termino il programma */
 	if(stream == NULL){
-		printf("File \"%s\" doesn't exist\n",parametro_2);
+		printf("File \"%s\" doesn't exist\n",argv[2]);
 		return 1;
 	}
 	
-	if(strcmp(parametro_1,"esegui") == 0){
-		
-		while ((nread = getline(&buffer, &len, stream)) != -1){
-			
-			if(primo_ciclo_fetch == 0){
-				sscanf(buffer,"%d",&numero_istruzioni_programma);
-				printf("%d",numero_istruzioni_programma);
-			}
-			primo_ciclo_fetch++;
+	if(strcmp(argv[1],"esegui") == 0){
+		getline( &buffer, & len, stream);
+		sscanf(buffer, "%d", & numero_istruzioni_programma);
+
+		inizializza(numero_istruzioni_programma);
+
+		buffer=NULL;		
+	
+		for(appo=0 ; appo < numero_istruzioni_programma-1; ++appo){           //prefetch istruzioni
+			getline( &buffer, &len, stream);
+			/*sscanf(buffer, "%d", &memoria[appo]);
+			printf("vettore[%d]= %d\n", appo,memoria[appo]);*/
 		}
-	}
+                /*
+		while(guardia){
+			switch(memoria[IP++]){
+				
+				case 0: 								//halt
+                                        guardia=0;
+                                        break;
 
-	if (strcmp(parametro_1, "stampa") == 0){
+                                case 1: 								//display
+                                        printf("REG%d:%d\n", memoria[IP], registri[memoria[IP++]]);
+                                        break;
 
-                while ((nread = getline( & buffer, & len, stream)) != -1) {
+                                case 2: 								//print stack
+                                        for(appo=0; appo < memoria[IP]; appo++)
+                                           	printf("STACK[%d]:%d\n", appo, stack[appo]);
+					IP++;
+                                        break;
+				
+                                case 10: 							//push
+                                        stack[SP++] = registri[memoria[IP++]];
+                                        break;
+
+                                case 11: 							//pop
+                                        registri[memoria[IP++]] = stack[--SP];
+                                        break;
+
+                                case 12: 							//mov
+                                        registri[memoria[IP++]] = memoria[IP++]; 
+                                        break;
+
+                                case 20: 							//call
+                                        stack[SP++] = memoria[IP+1];
+					IP = memoria[IP];
+                                        break;
+
+				case 21:							//ret
+                                        IP = stack[--SP];
+                                        break;
+
+                                case 22: 							//jmp
+                                        IP = memoria[IP++];
+                                        break;
+
+                                case 23: 							//jz
+                                        if(stack[--SP])
+						IP = memoria[IP++];
+                                        break;
+
+                                case 24: 							//jpos
+                                        if(0 < stack[--SP])
+						IP = memoria[IP++];
+                                        break;
+
+                                case 25: 							//jneg
+                                        if(0 > stack[--SP])
+						IP = memoria[IP++];
+                                        break;
+
+                                case 30: 						        		//add
+                                        stack[SP++] = registri[memoria[IP++]] + registri[memoria[IP++]]; 
+                                        break;
+
+                                case 31: 									//sub
+                                        stack[SP++] = registri[memoria[IP++]] - registri[memoria[IP++]]; 
+                                        break;
+
+                                case 32: 									//mult
+                                        stack[SP++] = registri[memoria[IP++]] * registri[memoria[IP++]];
+                                        break;
+
+                                case 33: 		                                                        //div
+                                        if(registri[memoria[IP+1]] == 0){ 
+						printf("Divisione per 0!\n");	
+						guardia=0;
+					}						
+                                        stack[SP++] = registri[memoria[IP++]] / registri[memoria[IP++]];
+                                        break;
+
+                                default: //error
+                                        printf("error");
+                                        break;
+			}	//parentesi switch
+		}  //parentesi while
+
+		printf("Esecuzione Terminata!\n");*/
+	} //parentesi funzione 
+
+
+	if (strcmp(argv[1], "stampa") == 0){
+
+                while (( getline( & buffer, & len, stream)) != -1) {
                         
 			if (primo_ciclo_fetch == 0)
                                 sscanf(buffer, "%d", & numero_istruzioni_programma);
@@ -83,106 +185,106 @@ int main(int argc, char **argv){
                                         printf("[%d]  RET\n", numero_istruzione);
                                         break;
                                 case 1:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  DISPLAY R%d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 2:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  PRINT_STACK %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 10:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  PUSH R%d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 11:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  POP R%d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
                                 case 12:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro2);
                                         printf("[%d]  MOV R%d %d \n", numero_istruzione, parametro1, parametro2);
                                         numero_istruzione = numero_istruzione + 2;
                                         break;
 
                                 case 20:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  CALL %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
                                 case 22:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  JMP %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 23:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  JZ %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 24:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  JPOS %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 25:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
                                         printf("[%d]  JNEG %d \n", numero_istruzione, parametro1);
                                         numero_istruzione++;
                                         break;
 
                                 case 30:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro2);
                                         printf("[%d]  ADD R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                         numero_istruzione = numero_istruzione + 2;
                                         break;
 
                                 case 31:
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
-                                        nread = getline( & buffer, & len, stream);
+                                         getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro2);
                                         printf("[%d]  SUB R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                         numero_istruzione = numero_istruzione + 2;
                                         break;
 
                                 case 32:
-                                        nread = getline( & buffer, & len, stream);
+                                        getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
-                                        nread = getline( & buffer, & len, stream);
+                                        getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro2);
                                         printf("[%d]  MUL R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                         numero_istruzione = numero_istruzione + 2;
                                         break;
 
                                 case 33:
-                                        nread = getline( & buffer, & len, stream);
+                                        getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro1);
-                                        nread = getline( & buffer, & len, stream);
+                                        getline( & buffer, & len, stream);
                                         sscanf(buffer, "%d", & parametro2);
                                         printf("[%d]  DIV R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                         numero_istruzione = numero_istruzione + 2;
@@ -197,6 +299,9 @@ int main(int argc, char **argv){
                         primo_ciclo_fetch++;
                 }
         }
+
+
         fclose(stream);
         return 0;
 }
+
