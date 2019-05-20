@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 
 /**********************************************************************************/
@@ -159,23 +160,40 @@ int main(int argc, char ** argv) {
                                 break;
 
                         case 30: /*add*/
-                                stack[SP++] = registri[memoria[IP]] + registri[memoria[IP + 1]];
-				 /*controllo overflow*/
-                                if ((stack[SP - 1] < 0  &&  registri[memoria[IP]] > 0  &&  registri[memoria[IP + 1]] > 0)  ||
-				    (stack[SP - 1] > 0  &&  registri[memoria[IP]] < 0  &&  registri[memoria[IP + 1]] < 0)) {
+						/*controllo overflow*/
+                                if (registri[memoria[IP]] > 0 && registri[memoria[IP + 1]] > 0 && ((INT_MAX - registri[memoria[IP]]) < registri[memoria[IP + 1]])) {
                                  	printf("Overflow\n");
                                         guardia = 0;
                                 }
-                                IP += 2;
+				else
+				{
+					if(registri[memoria[IP]] < 0 && registri[memoria[IP + 1]] < 0 && ((INT_MIN - registri[memoria[IP]]) > registri[memoria[IP + 1]])){
+                                                printf("Underflow\n");
+                                                guardia = 0; 
+					}
+					else{
+					        stack[SP++] = registri[memoria[IP]] + registri[memoria[IP + 1]];
+					}
+				}
+				IP += 2;
                                 break;
 
                         case 31: /*sub*/
-                                stack[SP++] = registri[memoria[IP]] - registri[memoria[IP + 1]];
-				 /*controllo overflow*/
-                                if ((stack[SP - 1] < registri[memoria[IP]]) != (registri[memoria[IP + 1]] > 0)){ 
-                                      	printf("Overflow\n");
+						/*controllo overflow*/
+                                if (registri[memoria[IP]] > 0 && registri[memoria[IP + 1]] < 0 && ((INT_MAX - registri[memoria[IP]]) > (registri[memoria[IP + 1]])*-1)) {
+                                 	printf("Overflow\n");
                                         guardia = 0;
                                 }
+				else
+				{
+				        if(registri[memoria[IP]] < 0 && registri[memoria[IP + 1]] > 0 && ((INT_MIN - registri[memoria[IP]])*-1 < registri[memoria[IP + 1]])){
+                                           printf("Underflow\n");
+                                           guardia = 0; 
+					}
+					else{
+                                                stack[SP++] = registri[memoria[IP]] - registri[memoria[IP + 1]];
+				        }
+				}
                                 IP += 2;
                                 break;
 
@@ -214,7 +232,6 @@ int main(int argc, char ** argv) {
                             printf("REG[%d]: %d\n", appo, registri[appo]);
                         }
                         printf("\n");
-
                         for(appo=0; appo< 32; appo++){
                             printf("STACK[%d]: %d\n", appo, stack[appo]);
                         }
