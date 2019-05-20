@@ -202,7 +202,7 @@ int main(int argc, char ** argv) {
                                 break;
 
                         default: /*error*/
-                                printf("Comando non riconosciuto");
+                                printf("Comando non riconosciuto\n");
                                 break;
                         
 			} /*parentesi switch*/
