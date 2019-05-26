@@ -59,7 +59,7 @@ int main(int argc, char ** argv) {
         /*INIZIALIZZAZIONE E O DICHIARAZIONE VARIABILI*/
         /**********************************************************************************/
 
-        int numero_istruzioni_programma, appo;
+        int numero_istruzioni_programma, appo, REG1, REG2, REG1_ABS, REG2_ABS, Op;
         unsigned int SP = 0;
         unsigned int IP = 0;
         int guardia = 1;
@@ -67,6 +67,7 @@ int main(int argc, char ** argv) {
         int parametro1 = 0;
         int parametro2 = 0;
         int primo_ciclo_fetch = 0;
+
 
 
         /**********************************************************************************/
@@ -198,13 +199,27 @@ int main(int argc, char ** argv) {
                                 break;
 
                         case 32: /*mult*/
-                                stack[SP++] = registri[memoria[IP]] * registri[memoria[IP + 1]];
-				 /*controllo overflow*/
-                                if (stack[SP - 1] != 0 && stack[SP - 1] / registri[memoria[IP]] != registri[memoria[IP + 1]]){
-                                       	printf("Overflow\n");
-                                        guardia = 0;
-                                }
-                                IP += 2;
+				REG1 = registri[memoria[IP]];
+				REG2 = registri[memoria[IP + 1]];
+				REG1_ABS = abs(registri[memoria[IP]]);
+				REG2_ABS = abs(registri[memoria[IP + 1]]);
+				Op = 1;
+					
+				/*controllo overflow*/
+				if(REG1 && REG2){
+					if((INT_MAX / REG1_ABS) < REG2_ABS){
+						if((REG1<0 && REG2>0) || (REG1>0 && REG2<0))
+							printf("Underflow\n");
+						else
+							printf("Overflow\n");
+						
+						guardia = 0;  Op = 0;			
+					}		
+				}
+				
+				if(Op) stack[SP++] = REG1 * REG2;
+				IP += 2;
+
                                 break;
 
                         case 33: /*div*/
