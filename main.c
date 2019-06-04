@@ -40,7 +40,10 @@ void chiusura() {                                         		/*free*/
 
 void getline_sscanf(int* parametro1, int* parametro2){        		/*legge dal file e memorizza i numeri*/
         getline(&buffer, &len, stream);
-        sscanf(buffer, "%d", parametro1);
+		while(buffer[0] == ';'){
+				getline(&buffer, &len, stream);
+	    }
+		sscanf(buffer, "%d", parametro1);		
 	
 	if(parametro2){
 		getline(&buffer, &len, stream);
@@ -265,7 +268,7 @@ int main(int argc, char ** argv) {
         if (strcmp(argv[1], "stampa") == 0) {
 
                 while ((getline( & buffer, & len, stream)) != -1) {
-
+                    if(buffer[0] != ';'){
                         if (primo_ciclo_fetch == 0)
                                 sscanf(buffer, "%d", & numero_istruzioni_programma);
 
@@ -369,9 +372,12 @@ int main(int argc, char ** argv) {
                                 numero_istruzione++;
                         }
                         primo_ciclo_fetch++;
+					}
                 }
         }
 
         fclose(stream);
         return 0;
 }
+
+
