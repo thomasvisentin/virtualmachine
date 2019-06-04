@@ -149,7 +149,7 @@ int main(int argc, char ** argv) {
                                 break;
 
                         case 23: /*jz*/
-                                (stack[--SP])      ?	IP = memoria[IP] : IP++;	
+                                (!stack[--SP])     ?	IP = memoria[IP] : IP++;	
                                 break;
 
                         case 24: /*jpos*/
@@ -241,8 +241,8 @@ int main(int argc, char ** argv) {
 			} /*parentesi switch*/
 
 
-                        /****************FOR DEBUG*********************** 
-				
+                        /****************FOR DEBUG***********************/
+			/*
 			for(appo=0; appo< 32; appo++){
                             printf("REG[%d]: %d\n", appo, registri[appo]);
                         }
@@ -250,7 +250,8 @@ int main(int argc, char ** argv) {
                         for(appo=0; appo< 32; appo++){
                             printf("STACK[%d]: %d\n", appo, stack[appo]);
                         }
-                        scanf("%d", &appo);*/
+                        scanf("%d", &appo);
+			*/
 
 
 		} /*parentesi while*/
