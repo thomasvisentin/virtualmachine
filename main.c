@@ -2,12 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+/**********************************************************************************/
+/*DEFINE*/
+/**********************************************************************************/
+#define MAXREG 32
+#define MAXSTACK 16384
 
 
 /**********************************************************************************/
 /*INIZIALIZZAZIONE DICHIARAZIONE VARIABILI GLOBALI*/
 /**********************************************************************************/
-
+unsigned int SP = 0;
+unsigned int IP = 0;
 FILE * stream;
 int * stack;
 int * memoria;
@@ -21,15 +27,51 @@ size_t len;
 /**********************************************************************************/
 
 void inizializza(int istruzioni) {
-        registri = (int * ) calloc(32, sizeof(int)); 			/*alloco tutti i 32 registri a 0 */
-        stack = (int * ) calloc(16384, sizeof(int)); 			/*alloco lo stack di 64 KB (di interi) a 0*/
+        registri = (int * ) calloc(MAXREG, sizeof(int)); 		/*alloco tutti i 32 registri a 0 */
+        stack = (int * ) calloc(MAXSTACK, sizeof(int)); 		/*alloco lo stack di 64 KB (di interi) a 0*/
         memoria = (int * ) calloc(istruzioni, sizeof(int)); 		/*alloco la memoria che conterrà il programma a 0*/
 }
 
-void chiusura() {                                         		/*free*/
+void chiusura(){                                         		/*free e chiusura programma*/
         free(registri); 			
         free(stack); 			
-        free(memoria); 		
+        free(memoria); 
+	fclose(stream);
+        exit(0);		
+}
+
+void errore(char * c){                                    		/*errore virtual machine*/        
+	printf("Errore Virtual Machine: %s\n", c);
+	printf("Programma abortito !\n");
+	chiusura();
+}
+
+void stack_push(int n){ 						/*stack push con i relativi controlli*/ 
+	if(SP>=MAXSTACK)
+		errore("Stack Overflow");
+		
+	stack[SP++] = n;
+}
+
+int stack_pop(){							/*stack pop con i relativi controlli*/
+	if(SP<1)
+		errore("Stack Underflow");
+		
+	return stack[--SP];
+}
+
+void registro_scrivi(int pos, int n){					/*scrittura su registro con i relativi controlli*/
+	if(pos<0 || pos>=MAXREG)
+		errore("Registro inesistente, registri disponibili 0->31");
+
+	registri[pos] = n;
+}
+
+int registro_leggi(int pos){						/*lettura da registro con i relativi controlli*/		
+	if(pos<0 || pos>=MAXREG)
+		errore("Registro inesistente, registri disponibili 0->31");
+
+	return registri[pos];
 }
 
 
@@ -62,15 +104,12 @@ int main(int argc, char ** argv) {
         /*INIZIALIZZAZIONE E O DICHIARAZIONE VARIABILI*/
         /**********************************************************************************/
 
-        int numero_istruzioni_programma, appo, REG1, REG2, REG1_ABS, REG2_ABS, Op;
-        unsigned int SP = 0;
-        unsigned int IP = 0;
+        int numero_istruzioni_programma, appo, REG1, REG2, REG1_ABS, REG2_ABS;
         int guardia = 1;
         int numero_istruzione = 0;
         int parametro1 = 0;
         int parametro2 = 0;
         int primo_ciclo_fetch = 0;
-
 
 
         /**********************************************************************************/
@@ -111,8 +150,9 @@ int main(int argc, char ** argv) {
 			getline_sscanf( &memoria[appo], NULL);
 
                 while (guardia) {
+			
 			if(IP >= (unsigned int)numero_istruzioni_programma){
-				printf("Errore Virtual Machine: ERRORE DI SEGMENTAZIONE\n");
+				errore("ERRORE DI SEGMENTAZIONE");
 				break;
 			}
 
@@ -122,132 +162,124 @@ int main(int argc, char ** argv) {
                                 guardia = 0;
                                 break;
 
-                        case 1: /*display*/	   /*IP++ come era prima dentro il printf da problemi*/
-                                printf("R%d:%d\n", memoria[IP], registri[memoria[IP]]);		IP++; 
+                        case 1: /*display*/	   
+                                printf("R%d:%d\n", memoria[IP], registro_leggi(memoria[IP]));		IP++; 
                                 break;
 
                         case 2: /*print stack*/
-                                for (appo = 0; appo < memoria[IP]; appo++)
+                                for (appo = 0; appo < memoria[IP] && appo < numero_istruzioni_programma; appo++)
                                         printf("STACK[%d]:%d\n", appo, stack[appo]);
                                 IP++;
                                 break;
 
-                        case 10: /*push*/
-                                stack[SP++] = registri[memoria[IP++]];
+                        case 10: /*push*/                                               
+				stack_push(registro_leggi(memoria[IP++]));
                                 break;
 
-                        case 11: /*pop*/
-                                registri[memoria[IP++]] = stack[--SP];
+                        case 11: /*pop*/					       
+				registro_scrivi(memoria[IP++], stack_pop());
                                 break;
 
                         case 12: /*mov*/
-                                registri[memoria[IP]] = memoria[IP + 1]; 	  IP += 2;
+				registro_scrivi(memoria[IP], memoria[IP + 1]);		IP += 2;
                                 break;
 
-                        case 20: /*call*/
-                                stack[SP++] = IP + 1;	   IP = memoria[IP];
+                        case 20: /*call*/						
+				stack_push(IP + 1);	IP = memoria[IP];
                                 break;
 
-                        case 21: /*ret*/
-                                IP = stack[--SP];
+                        case 21: /*ret*/					       
+				IP = stack_pop();
                                 break;
 
-                        case 22: /*jmp*/
+                        case 22: /*jmp*/			
                                 IP = memoria[IP];                         
                                 break;
 
-                        case 23: /*jz*/
-                                (!stack[--SP])     ?	IP = memoria[IP] : IP++;	
+                        case 23: /*jz*/							
+				(!stack_pop())     ?	IP = memoria[IP] : IP++; 		
                                 break;
 
-                        case 24: /*jpos*/
-                                (0 < stack[--SP])  ?	IP = memoria[IP] : IP++;   
+                        case 24: /*jpos*/						
+				(0 < stack_pop())  ?	IP = memoria[IP] : IP++;
                                 break;
 
-                        case 25: /*jneg*/
-                                (0 > stack[--SP])  ?	IP = memoria[IP] : IP++;      
+                        case 25: /*jneg*/						
+				(0 > stack_pop())  ?	IP = memoria[IP] : IP++;      
                                 break;
 
                         case 30: /*add*/
 						/*controllo overflow*/
-                                if (registri[memoria[IP]] > 0 && registri[memoria[IP + 1]] > 0 && 
-				   ((INT_MAX - registri[memoria[IP]]) < registri[memoria[IP + 1]])) {
-                                 	printf("Errore Virtual Machine: Overflow\n");
-                                        guardia = 0;
-                                }
+                                if (registro_leggi(memoria[IP]) > 0 && registro_leggi(memoria[IP + 1]) > 0 && 
+				   ((INT_MAX - registro_leggi(memoria[IP])) < registro_leggi(memoria[IP + 1])))
+                                 	errore("Add Overflow");
+                                        
 				else
 				{
-					if(registri[memoria[IP]] < 0 && registri[memoria[IP + 1]] < 0 && 
-					  ((INT_MIN - registri[memoria[IP]]) > registri[memoria[IP + 1]])){
-                                                printf("Errore Virtual Machine: Underflow\n");
-                                                guardia = 0; 
-					}
-					else{
-					        stack[SP++] = registri[memoria[IP]] + registri[memoria[IP + 1]];
-					}
+					if(registro_leggi(memoria[IP]) < 0 && registro_leggi(memoria[IP + 1]) < 0 && 
+					  ((INT_MIN - registro_leggi(memoria[IP])) > registro_leggi(memoria[IP + 1])))
+                                                errore("Add Underflow");
+                                                 
+					else
+					        stack_push(registro_leggi(memoria[IP]) + registro_leggi(memoria[IP + 1]));	
 				}
+
 				IP += 2;
                                 break;
 
                         case 31: /*sub*/
 						/*controllo overflow*/
-                                if (registri[memoria[IP]] > 0 && registri[memoria[IP + 1]] < 0 && 
-				   ((INT_MAX - registri[memoria[IP]]) > (registri[memoria[IP + 1]])*-1)) {
-                                 	printf("Errore Virtual Machine: Overflow\n");
-                                        guardia = 0;
-                                }
+                                if (registro_leggi(memoria[IP]) > 0 && registro_leggi(memoria[IP + 1]) < 0 && 
+				   ((INT_MAX - registro_leggi(memoria[IP])) > (registro_leggi(memoria[IP + 1]))*-1)) 
+                                 	errore("Sub Overflow");
+                                        
 				else
 				{
-				        if(registri[memoria[IP]] < 0 && registri[memoria[IP + 1]] > 0 && 
-					  ((INT_MIN - registri[memoria[IP]])*-1 < registri[memoria[IP + 1]])){
-                                           printf("Errore Virtual Machine: Underflow\n");
-                                           guardia = 0; 
-					}
-					else{
-                                                stack[SP++] = registri[memoria[IP]] - registri[memoria[IP + 1]];
-				        }
+				        if(registro_leggi(memoria[IP]) < 0 && registro_leggi(memoria[IP + 1]) > 0 && 
+					  ((INT_MIN - registro_leggi(memoria[IP]))*-1 < registro_leggi(memoria[IP + 1])))
+                                           	errore("Sub Underflow");
+                                          
+					else
+                                                stack_push(registro_leggi(memoria[IP]) - registro_leggi(memoria[IP + 1]));
+				        
 				}
                                 IP += 2;
                                 break;
 
                         case 32: /*mult*/
-				REG1 = registri[memoria[IP]];
-				REG2 = registri[memoria[IP + 1]];
-				REG1_ABS = abs(registri[memoria[IP]]);
-				REG2_ABS = abs(registri[memoria[IP + 1]]);
-				Op = 1;
+				REG1 = registro_leggi(memoria[IP]);
+				REG2 = registro_leggi(memoria[IP + 1]);
+				REG1_ABS = abs(registro_leggi(memoria[IP]));
+				REG2_ABS = abs(registro_leggi(memoria[IP + 1]));
 					
 				/*controllo overflow*/
 				if(REG1 && REG2){
 					if((INT_MAX / REG1_ABS) < REG2_ABS){
 						if((REG1<0 && REG2>0) || (REG1>0 && REG2<0))
-							printf("Errore Virtual Machine: Underflow\n");
+							errore("Mult Underflow");
 						else
-							printf("Errore Virtual Machine: Overflow\n");
-						
-						guardia = 0;  Op = 0;			
-					}		
+							errore("Mult Overflow");	
+					}	
 				}
 				
-				if(Op) stack[SP++] = REG1 * REG2;
+				stack_push(REG1 * REG2);
 				IP += 2;
 
                                 break;
 
                         case 33: /*div*/
 				 /*controllo divisione per 0*/
-                                if (registri[memoria[IP + 1]] == 0) {
-                                       	printf("Errore Virtual Machine: Divisione per 0!\n");
-                                        guardia = 0;
-                                }
+                                if (registro_leggi(memoria[IP + 1]) == 0) 
+                                       	errore("Divisione per 0!");
+                                        
 				else{
-                                	stack[SP++] = registri[memoria[IP]] / registri[memoria[IP + 1]];
+                                	stack_push(registro_leggi(memoria[IP]) / registro_leggi(memoria[IP + 1]));
                                 	IP += 2;
 				}
                                 break;
 
                         default: /*error*/
-                                printf("Errore Virtual Machine: Comando non riconosciuto\n");
+                                errore("Comando non riconosciuto");
                                 break;
                         
 			} /*parentesi switch*/
@@ -268,7 +300,7 @@ int main(int argc, char ** argv) {
 
 		} /*parentesi while*/
 
-                printf("Esecuzione Terminata!\n");
+                printf("Programma terminato correttamente!\n");
 		chiusura();
 
         } /*parentesi funzione*/
@@ -386,11 +418,11 @@ int main(int argc, char ** argv) {
                         	primo_ciclo_fetch++;
 			}
                 }
+		fclose(stream);
+		return 0;
         }
 
-        fclose(stream);
-        return 0;
+	printf("Operazione non riconosciuta !");
+	printf("Operazioni ammesse: STAMPA, ESEGUI");
+        return 1;
 }
-
-
-
