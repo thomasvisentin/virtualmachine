@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+
+/*         Gruppo        P1G103
+ *   
+ *   	Nicolas Pietro Martignon    870034 
+ *   	Thomas Visentin             869438
+ *
+ */
+
 /**********************************************************************************/
 /*DEFINE*/
 /**********************************************************************************/
@@ -10,7 +18,7 @@
 
 
 /**********************************************************************************/
-/*INIZIALIZZAZIONE DICHIARAZIONE VARIABILI GLOBALI*/
+/*INIZIALIZZAZIONE E/O DICHIARAZIONE VARIABILI GLOBALI*/
 /**********************************************************************************/
 unsigned int SP = 0;
 unsigned int IP = 0;
@@ -75,9 +83,8 @@ int registro_leggi(int pos){						/*lettura da registro con i relativi controlli
 }
 
 
-
 /**********************************************************************************/
-/*FUNZIONI AUSILIARE STAMPA*/
+/*FUNZIONI AUSILIARE*/
 /**********************************************************************************/
 
 void getline_sscanf(int* parametro1, int* parametro2){        		/*legge dal file e memorizza i numeri*/
@@ -101,7 +108,7 @@ void getline_sscanf(int* parametro1, int* parametro2){        		/*legge dal file
 int main(int argc, char ** argv) {
 
  	/**********************************************************************************/
-        /*INIZIALIZZAZIONE E O DICHIARAZIONE VARIABILI*/
+        /*INIZIALIZZAZIONE E/O DICHIARAZIONE VARIABILI*/
         /**********************************************************************************/
 
         int numero_istruzioni_programma, appo, REG1, REG2, REG1_ABS, REG2_ABS;
@@ -118,17 +125,18 @@ int main(int argc, char ** argv) {
 
         /* controllo che il programma non venga invocato con più di 2 parametri in caso contrario termino il programma*/
         if (argc > 3) {
-                printf("Too many parameters\n");
+                printf("Troppi parametri\n");
                 return 1;
         }
         /* controllo che il programma non venga invocato con meno di 2 parametri in caso contrario termino il programma*/
         if (argc < 3) {
-                printf("Too few parameters\n");
+                printf("Pochi parametri\n");
                 return 1;
         }
         /* primo parametro errato */
         if ((strcmp(argv[1], "esegui") != 0) && (strcmp(argv[1], "stampa") != 0)) {
-                printf("First parameter is invalid\n");
+                printf("Operazioni invalida\n");
+		printf("Operazioni ammesse: stampa esegui\n");
                 return 1;
         }
 
@@ -136,7 +144,7 @@ int main(int argc, char ** argv) {
 
         /* se il file non esiste termino il programma */
         if (stream == NULL) {
-                printf("File \"%s\" doesn't exist\n", argv[2]);
+                printf("File \"%s\" non esistente\n", argv[2]);
                 return 1;
         }
 
@@ -151,12 +159,13 @@ int main(int argc, char ** argv) {
 
                 while (guardia) {
 			
-			if(IP >= (unsigned int)numero_istruzioni_programma){
+			/* se instruction pointer supera il numero di istruzioni del programma */
+			if(IP >= (unsigned int)numero_istruzioni_programma){           
 				errore("ERRORE DI SEGMENTAZIONE");
 				break;
 			}
 
-                        switch (memoria[IP++]) {
+                        switch (memoria[IP++]) {     /* fetch istruzione */
 
                         case 0: /*halt*/
                                 guardia = 0;
@@ -308,7 +317,7 @@ int main(int argc, char ** argv) {
 	/* operazione stampa */
         if (strcmp(argv[1], "stampa") == 0) {
 
-                while ((getline( & buffer, & len, stream)) != -1) {
+                while ((getline( & buffer, & len, stream)) != -1) {   /* fetch istruzione */
                 	if(buffer[0] != ';'){
                         	if (primo_ciclo_fetch == 0)
                                 	sscanf(buffer, "%d", & numero_istruzioni_programma);
@@ -317,112 +326,113 @@ int main(int argc, char ** argv) {
                                 	sscanf(buffer, "%d", & numero_istruzioni_programma);
                                 	switch (numero_istruzioni_programma) {
 
-                                	case 0:
+                                	case 0: /*halt*/
                                 	        printf("[%d]  HALT\n", numero_istruzione);
                                 	        break;
 
-                                	case 21:
+                                	case 21: /*ret*/ 
                                 	        printf("[%d]  RET\n", numero_istruzione);
                                 	        break;
                                 	
-					case 1:
+					case 1: /*display*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  DISPLAY R%d \n", numero_istruzione, parametro1);	
 						numero_istruzione++;
                                 	        break;
 	
-                                	case 2:
+                                	case 2: /*print stack*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  PRINT_STACK %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 
-                                	case 10:
+                                	case 10: /*push*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  PUSH R%d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 
-                                	case 11:
+                                	case 11: /*pop*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  POP R%d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
                                 	
-					case 12:
+					case 12: /*mov*/
                                 	        getline_sscanf( &parametro1, &parametro2);
                                 	        printf("[%d]  MOV R%d %d \n", numero_istruzione, parametro1, parametro2);
                                 	        numero_istruzione += 2;
                                 	        break;
 	
-                                	case 20:
+                                	case 20: /*call*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  CALL %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
                                 	
-					case 22:
+					case 22: /*jmp*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  JMP %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 	
-                                	case 23:
+                                	case 23: /*jz*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  JZ %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 	
-                                	case 24:
+                                	case 24: /*jpos*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  JPOS %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 	
-                                	case 25:
+                                	case 25: /*jneg*/
                                 	        getline_sscanf( &parametro1, NULL);
                                 	        printf("[%d]  JNEG %d \n", numero_istruzione, parametro1);
                                 	        numero_istruzione++;
                                 	        break;
 	
-                                	case 30:
+                                	case 30: /*add*/
                                 	        getline_sscanf( &parametro1, &parametro2);
                                 	        printf("[%d]  ADD R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                 	        numero_istruzione += 2;
                                 	        break;
 	
-                                	case 31:
+                                	case 31: /*sub*/
                                 	        getline_sscanf( &parametro1, &parametro2);
                                 	        printf("[%d]  SUB R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                 	        numero_istruzione += 2;
                                 	        break;
 	
-                                	case 32:
+                                	case 32: /*mult*/
                                 	        getline_sscanf( &parametro1, &parametro2);
                                 	        printf("[%d]  MUL R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                 	        numero_istruzione += 2;
                                 	        break;
 	
-                                	case 33:
+                                	case 33: /*div*/
                                 	        getline_sscanf( &parametro1, &parametro2);
                                 	        printf("[%d]  DIV R%d R%d \n", numero_istruzione, parametro1, parametro2);
                                 	        numero_istruzione += 2;
                                 	        break;
 	
-                                	default:
-                                	        printf("Errore Virtual Machine: Comando non riconosciuto ");
+                                	default: /*error*/
+                                	        printf("Errore Virtual Machine: Comando non riconosciuto\n");
                                        		break;
-                                	}
-                                	numero_istruzione++;
-                        	}
+                                	} /*parentesi switch*/
+                                	
+					numero_istruzione++;
+                        	} /*parentesi else*/
+
                         	primo_ciclo_fetch++;
-			}
-                }
+			} /*parentesi if*/
+                } /*parentesi while*/
+		
 		fclose(stream);
 		return 0;
-        }
+        } /*parentesi stampa*/
 
-	printf("Operazione non riconosciuta !");
-	printf("Operazioni ammesse: STAMPA, ESEGUI");
-        return 1;
+	return 1;
 }
